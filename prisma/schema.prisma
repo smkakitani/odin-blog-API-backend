@@ -13,3 +13,47 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// Schema
+model Author {
+  id        Int     @id @default(autoincrement())
+  firstName String  @map("first_name")
+  lastName  String  @map("last_name")
+  bio       String?
+  posts     Post[]
+
+  @@map("authors")
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  author    Author   @relation(fields: [authorId], references: [id])
+  authorId  Int      @map("author_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at")
+  published Boolean  @default(false)
+  title     String
+  content   String
+
+  @@map("posts")
+}
+
+model Visitor {
+  id       String    @id @default(ulid())
+  username String    @unique
+  email    String    @unique
+  comments Comment[]
+
+  @@map("visitors")
+}
+
+model Comment {
+  id         String   @id @default(ulid())
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  content    String
+  username   Visitor  @relation(fields: [usernameId], references: [id])
+  usernameId String   @map("username_id")
+  isHidden   Boolean  @default(false)
+
+  @@map("comments")
+}
