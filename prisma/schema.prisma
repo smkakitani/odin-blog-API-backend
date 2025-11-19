@@ -5,8 +5,10 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  provider            = "prisma-client-js"
+  output              = "../generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = "cjs"
 }
 
 datasource db {
@@ -19,6 +21,8 @@ model Author {
   id        Int     @id @default(autoincrement())
   firstName String  @map("first_name")
   lastName  String  @map("last_name")
+  email     String  @unique
+  password  String
   bio       String?
   posts     Post[]
 
@@ -42,6 +46,7 @@ model Visitor {
   id       String    @id @default(ulid())
   username String    @unique
   email    String    @unique
+  password String
   comments Comment[]
 
   @@map("visitors")
@@ -56,4 +61,11 @@ model Comment {
   isHidden   Boolean  @default(false)
 
   @@map("comments")
+}
+
+model Session {
+  id        String   @id
+  sid       String   @unique
+  data      String
+  expiresAt DateTime
 }

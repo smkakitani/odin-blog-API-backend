@@ -7,6 +7,14 @@ require("dotenv").config();
 // import cors from "cors";
 const express = require("express");
 const cors = require("cors");
+const session = require("express-session");
+// const passport = require("passport");
+const passport = require("./config/passport");
+const { PrismaSessionStore } = require("@quixo3/prisma-session-store");
+
+// Config imports
+const prisma = require("./config/database");
+// require("./config/passport")(passport); // Pass the global passport object into the configuration function
 
 // Import routers
 // import indexRouter from "./routes/indexRouter.js";
@@ -19,9 +27,38 @@ const app = express();
 
 
 // Cross-Origin Resource Sharing
-app.use(cors({
+app.use(cors());
+/* app.use(cors({
   methods: ['GET', 'POST', 'DELETE', 'PUT'],
+})); */
+
+// Prisma session store
+app.use(session({
+  cookie: {
+    maxAge: 7 * 24 * 60 * 60 * 1000 // ms
+  },
+  secret: process.env.SECRET_SESSION,
+  resave: true,
+  saveUninitialized: true,
+  store: new PrismaSessionStore(
+    prisma, {
+      checkPeriod: 2 * 60 * 1000, // ms
+      dbRecordIdIsSessionId: true,
+      dbRecordIdFunction: undefined,
+    })
 }));
+
+// Passport auth
+app.use(passport.session());
+
+// Custom middleware to access current user
+app.use((req, res, next) => {
+  res.currentUser = req.user;
+
+  console.log(req.session);
+  console.log(req.user);
+  next();
+});
 
 
 
