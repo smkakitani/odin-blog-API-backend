@@ -5,9 +5,12 @@ const postRouter = Router();
 
 
 
-// Routers - /api/post
-postRouter.get("/", postController.postsAll);
+// Routers - /posts
+postRouter.get("/", postController.postAll);
 
+postRouter.get("/:authorId/:postId", postController.postById);
+
+// postRouter.get("/:postId/comments", postController.postComments);
 
 
 

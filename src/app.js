@@ -1,26 +1,21 @@
 // Environment variables
-// import "dotenv/config";
 require("dotenv").config();
 
 // Server
-// import express from "express";
-// import cors from "cors";
 const express = require("express");
 const cors = require("cors");
-const session = require("express-session");
+// const session = require("express-session");
 // const passport = require("passport");
-const passport = require("./config/passport");
+// const passport = require("./config/passport");
 const { PrismaSessionStore } = require("@quixo3/prisma-session-store");
+const jwtStrategy = require("./config/passport");
 
 // Config imports
-const prisma = require("./config/database");
+// const prisma = require("./config/database");
 // require("./config/passport")(passport); // Pass the global passport object into the configuration function
 
 // Import routers
-// import indexRouter from "./routes/indexRouter.js";
-// import authorRouter from "./routes/authorRouter.js";
 const indexRouter = require("./routes/indexRouter");
-// const authorRouter = require("./routes/authorRouter");
 
 const app = express();
 
@@ -32,8 +27,12 @@ app.use(cors());
   methods: ['GET', 'POST', 'DELETE', 'PUT'],
 })); */
 
+// Enable req.body to parse client's output
+// app.use(express.json()) // For parsing application/json
+app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
+
 // Prisma session store
-app.use(session({
+/* app.use(session({
   cookie: {
     maxAge: 7 * 24 * 60 * 60 * 1000 // ms
   },
@@ -46,17 +45,20 @@ app.use(session({
       dbRecordIdIsSessionId: true,
       dbRecordIdFunction: undefined,
     })
-}));
+})); */
 
 // Passport auth
-app.use(passport.session());
+// app.use(passport.session());
+// app.use(passport.)
+// passport.use(jwtStrategy);
 
 // Custom middleware to access current user
 app.use((req, res, next) => {
-  res.currentUser = req.user;
+  // res.currentUser = req.user;
 
-  console.log(req.session);
-  console.log(req.user);
+  // console.log(req.session);
+  // console.log('from main: ',req.logout);
+  // console.log(req.body);
   next();
 });
 
@@ -65,7 +67,7 @@ app.use((req, res, next) => {
 // Routers
 // app.use("/api", indexRouter);
 // app.use("/api/author", authorRouter);
-app.use("/api", indexRouter);
+app.use("/", indexRouter);
 
 
 
