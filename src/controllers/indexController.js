@@ -3,8 +3,9 @@ const prisma = require("../config/database");
 // const {Prisma} = require("../../generated/prisma");
 // const { body, query, validationResult, matchedData } = require("express-validator");
 const { validateAuthor, validationResult, matchedData } = require("../utils/validation");
+// Encrypt password
 const bcrypt = require("bcryptjs");
-// 
+// Auth
 const passport = require("passport");
 const { jwtStrategy } = require("../config/passport");
 const jwt = require("jsonwebtoken");
@@ -64,7 +65,12 @@ const logIn = [
       const { email, password } = req.body;
       
       const user = await prisma.author.findUnique({
-        where: { email: email }
+        where: { email: email },
+        select: {
+          email: true,
+          id: true,
+          password: true,
+        },
       });    
 
       if (!user) {
@@ -77,10 +83,11 @@ const logIn = [
         return res.status(400).json({ status: 400, errMsg: "Incorrect password"});
       }
 
-      // 
-      const token = jwt.sign({user}, process.env.SECRET_SESSION, { expiresIn: 60 });
+      // Send only necessary information about user to store on token
+      delete user.password;
 
-      console.log('calling from login: ', user);
+      const token = jwt.sign({user}, process.env.SECRET_SESSION, { expiresIn: "1H" });
+
       res.status(200).json({ 
         status: 200,
         message: "Authentication succeeded",
@@ -93,13 +100,15 @@ const logIn = [
 ];
 
 async function logOut(req, res, next) {
-  req.logout((err) => {
-    if (err) {
-      console.error(err);
-      return next(err);
-    }
-    res.send("logging out... ;-;");
-  });
+  // When the user logs out, you can have the client remove the JWT from storage.
+  res.send("logging out... ;-;");
+  // req.logout((err) => {
+  //   if (err) {
+  //     console.error(err);
+  //     return next(err);
+  //   }
+  //   res.send("logging out... ;-;");
+  // });
 }
 
 

@@ -66,6 +66,13 @@ const validateAuthor = [
   // ,query("")
 ];
 
+const validateVisitor = [];
+
+// const validatePost = [
+//   body("title").notEmpty().trim()
+//     .
+// ];
+
 
 
 module.exports = {

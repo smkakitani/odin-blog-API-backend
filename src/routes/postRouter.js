@@ -6,11 +6,27 @@ const postRouter = Router();
 
 
 // Routers - /posts
+// Read posts
 postRouter.get("/", postController.postAll);
 
+// Create posts - every post must have an author
+postRouter.post("/", postController.postCreate);
+
+// Update posts - how to set published on frontend?
+postRouter.put("/:authorId/:postId", postController.postUpdate);
+
+// Post > Comments
+postRouter.get("/:postId/comments", postController.commentPost);
+
+// Read post 
 postRouter.get("/:authorId/:postId", postController.postById);
 
-// postRouter.get("/:postId/comments", postController.postComments);
+// Delete posts - deleting, in fact, is setting publish to false
+postRouter.delete("/:postId", postController.postDelete);
+
+
+
+
 
 
 

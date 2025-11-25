@@ -11,8 +11,7 @@ const authorRouter = require("./authorRouter");
 const postRouter = require("./postRouter");
 const visitorRouter = require("./visitorRouter");
 
-
-
+// 
 const indexRouter = Router();
 passport.use(jwtStrategy);
 
@@ -21,29 +20,20 @@ passport.use(jwtStrategy);
 // Routers - /api?
 indexRouter.get("/", (req, res) => res.send("Hello! From Blog API :3"));
 
-// Sign up
+// Sign up & log in/out
 indexRouter.post("/sign-up", indexController.signUp);
 indexRouter.post("/log-in", indexController.logIn);
-// indexRouter.get("/log-out", indexController.logOut);
-// indexRouter.get("/log-out", (req, res, next) => {
-//   req.logout((err) => {
-//     if (err) {
-//       return next(err);
-//     }
-//     res.send("logging out...");
-//   })
-// });
+// When the user logs out, you can have the client remove the JWT from localStorage.
+indexRouter.get("/log-out", indexController.logOut);
 
 
 
-// 
-indexRouter.use("/authors", authorRouter);
-indexRouter.use("/posts", (req, res, next) => {
-  console.log("calling from /posts");
-  next();
-},passport.authenticate(
+// API routers
+indexRouter.use("/authors", passport.authenticate("jwt", { session:false }), authorRouter);
+indexRouter.use("/posts", passport.authenticate(
   "jwt", {
-    session: false
+    session: false,
+    // failureRedirect: "/log-in",
   }
 ), postRouter);
 
