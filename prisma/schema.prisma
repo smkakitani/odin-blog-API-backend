@@ -30,14 +30,15 @@ model Author {
 }
 
 model Post {
-  id        Int      @id @default(autoincrement())
-  author    Author   @relation(fields: [authorId], references: [id])
-  authorId  Int      @map("author_id")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt DateTime @updatedAt @map("updated_at")
-  published Boolean  @default(false)
+  id        Int       @id @default(autoincrement())
+  author    Author    @relation(fields: [authorId], references: [id])
+  authorId  Int       @map("author_id")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  published Boolean   @default(false)
   title     String
   content   String
+  comments  Comment[]
 
   @@map("posts")
 }
@@ -58,6 +59,8 @@ model Comment {
   content    String
   username   Visitor  @relation(fields: [usernameId], references: [id])
   usernameId String   @map("username_id")
+  post       Post     @relation(fields: [postId], references: [id])
+  postId     Int      @map("post_id")
   isHidden   Boolean  @default(false)
 
   @@map("comments")
@@ -69,3 +72,5 @@ model Session {
   data      String
   expiresAt DateTime
 }
+
+// Adding comments to post relation
