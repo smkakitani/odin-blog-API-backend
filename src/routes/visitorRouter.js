@@ -5,10 +5,18 @@ const visitorRouter = Router();
 
 
 
-// Routers - /api/visitors
+// Routers - /api?/visitors
+// Read visitors
 visitorRouter.get("/", visitorController.visitorAll);
+visitorRouter.get("/:username", visitorController.visitorById);
 
-visitorRouter.get("/:authorId", visitorController.visitorById);
+// Create/Sign up visitors ---> indexRouter
+
+// Update visitor
+visitorRouter.put("/:username", visitorController.visitorEdit);
+
+// Delete visitor
+visitorRouter.delete("/:username", visitorController.visitorDelete);
 
 
 

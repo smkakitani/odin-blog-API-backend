@@ -21,7 +21,8 @@ passport.use(jwtStrategy);
 indexRouter.get("/", (req, res) => res.send("Hello! From Blog API :3"));
 
 // Sign up & log in/out
-indexRouter.post("/sign-up", indexController.signUp);
+indexRouter.post("/sign-up/author", indexController.authorSignUp);
+indexRouter.post("/sign-up", indexController.visitorSignUp)
 indexRouter.post("/log-in", indexController.logIn);
 // When the user logs out, you can have the client remove the JWT from localStorage.
 indexRouter.get("/log-out", indexController.logOut);

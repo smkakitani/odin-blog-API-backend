@@ -2,7 +2,7 @@
 const prisma = require("../config/database");
 // const {Prisma} = require("../../generated/prisma");
 // const { body, query, validationResult, matchedData } = require("express-validator");
-const { validateAuthor, validationResult, matchedData } = require("../utils/validation");
+const { validateAuthor, validateVisitor, validationResult, matchedData } = require("../utils/validation");
 // Encrypt password
 const bcrypt = require("bcryptjs");
 // Auth
@@ -16,7 +16,7 @@ passport.use(jwtStrategy);
 
 
 // 
-const signUp = [
+const authorSignUp = [
   validateAuthor,
   async (req, res, next) => {
     const errors = validationResult(req);
@@ -37,7 +37,7 @@ const signUp = [
       const hashPassword = await bcrypt.hash(password, 9);
       console.log({ firstName, lastName, email, password, bio }, 'hashed password: ',hashPassword);
 
-      // await prisma.author.create({
+      // const newAuthor = await prisma.author.create({
       //   data: {
       //     firstName,
       //     lastName,
@@ -55,6 +55,46 @@ const signUp = [
       console.error(err);
       return next(err);
     }
+  }
+];
+
+const visitorSignUp = [
+  validateVisitor,
+  async (req, res, next) => {
+    const errors = validationResult(req);
+    
+    if (!errors.isEmpty()) {
+      console.log(errors);
+      return res.status(400).json({
+        status: 400,
+        errMsg: "",
+        err: errors.array({ onlyFirstError: true }),
+      });
+    }
+
+    next();
+  }, async (req, res, next) => {
+    try {
+      const { username, email, password } = matchedData(req);
+      const hashPassword = await bcrypt.hash(password, 9);
+      console.log(username, email, password, 'hash password:', hashPassword);
+
+      const newUser = await prisma.visitor.create({
+        data: {
+          username,
+          email,
+          password: hashPassword,
+        }        
+      });
+
+      res.status(201).json({
+        status: 201,
+        message: "User has been created."
+      });
+      // res.json({ username, email, password });
+    } catch (err) {
+      console.error(err);
+    }    
   }
 ];
 
@@ -114,7 +154,8 @@ async function logOut(req, res, next) {
 
 
 module.exports = {
-  signUp,
+  authorSignUp,
+  visitorSignUp,
   logIn,
   logOut,
 };
