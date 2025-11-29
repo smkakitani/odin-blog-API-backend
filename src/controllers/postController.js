@@ -17,7 +17,6 @@ async function postAll(req, res) {
 
 async function postById(req, res) {
   try {
-    // console.log(req.params);
     const { authorId, postId } = req.params;
     console.log(authorId, postId);
 
@@ -56,12 +55,6 @@ async function postCreate(req, res, next) {
       select: { title: true, content: true, author: true }
     });
     
-    console.log('Creating post by: ', author, author.id);
-    // res.json({
-    //   message: "Post created successfully.",
-    //   title: title,
-    //   post: content,
-    // });
     res.json(result);
   } catch (err) {
     console.error('Creating post: ', err);
@@ -75,20 +68,16 @@ async function postUpdate(req, res, next) {
     const { title, content } = req.body;
     // Published?
 
-    // await prisma.post.update({
-    //   where: { id: postId },
-    //   data: {
-    //     title,
-    //     content,
-    //     published
-    //   }
-    // });
-
-    res.json({
-      author: author,
-      postId: postId,
-      post: req.body,
+    const post = await prisma.post.update({
+      where: { id: postId },
+      data: {
+        title,
+        content,
+        published
+      }
     });
+
+    res.json(post);
   } catch (err) {
     console.error(err);
   }
@@ -131,6 +120,52 @@ async function commentPost(req, res, next) {
   }
 }
 
+const commentCreate = [
+  // validateComment,
+  async (req, res, next) => {
+    const { content } = req.body;
+    const postId = req.params.postId;
+    const user = req.user;
+
+    const comment = await prisma.comment.create({
+      data: {
+        postId: Number(postId),
+        usernameId: user.id,
+        content: content,
+      }
+    });
+
+    res.json({postId,user, comment});
+  }
+];
+
+async function commentDelete(req, res) {
+  try {
+    const { postId, commentId } = req.params;
+    console.log("deleting comment?", req.params)
+
+    const delComment = await prisma.comment.delete({
+      where: { id: commentId },
+      select: { 
+        usernameId: true,
+        postId: true,
+      }
+    });
+
+    res.json({postId, commentId, delComment});
+  } catch (err) {
+    // console.error(err);
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (err.code === "P2025") {
+        return res.status(404).json({
+          status: 404,
+          errMsg: `Could not find ${err.meta.modelName}.`
+        });
+      }
+    }
+  }
+}
+
 
 
 module.exports = {
@@ -141,4 +176,6 @@ module.exports = {
   postDelete,
   // 
   commentPost,
+  commentCreate,
+  commentDelete,
 };
