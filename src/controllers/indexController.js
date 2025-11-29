@@ -1,7 +1,6 @@
 // Import Prisma's client instantiated in '../config/database'
 const prisma = require("../config/database");
-// const {Prisma} = require("../../generated/prisma");
-// const { body, query, validationResult, matchedData } = require("express-validator");
+// Validator
 const { validateAuthor, validateVisitor, validationResult, matchedData } = require("../utils/validation");
 // Encrypt password
 const bcrypt = require("bcryptjs");
@@ -37,15 +36,15 @@ const authorSignUp = [
       const hashPassword = await bcrypt.hash(password, 9);
       console.log({ firstName, lastName, email, password, bio }, 'hashed password: ',hashPassword);
 
-      // const newAuthor = await prisma.author.create({
-      //   data: {
-      //     firstName,
-      //     lastName,
-      //     email,
-      //     password: hashPassword,
-      //     bio,
-      //   }
-      // });
+      const newAuthor = await prisma.author.create({
+        data: {
+          firstName,
+          lastName,
+          email,
+          password: hashPassword,
+          bio,
+        }
+      });
 
       res.status(201).json({
         status: 201,
@@ -91,7 +90,6 @@ const visitorSignUp = [
         status: 201,
         message: "User has been created."
       });
-      // res.json({ username, email, password });
     } catch (err) {
       console.error(err);
     }    
@@ -104,22 +102,33 @@ const logIn = [
     try {
       const { email, password } = req.body;
       
-      const user = await prisma.author.findUnique({
+      // Should divide visitor log in from author log in...? hmmmm...
+      const findVisitor = await prisma.visitor.findUnique({
+        where: { email: email },
+        select: {
+          username: true,
+          email: true,
+          id: true,
+          password: true,
+        },
+      });
+      const findAuthor = await prisma.author.findUnique({
         where: { email: email },
         select: {
           email: true,
           id: true,
           password: true,
         },
-      });    
+      });
+      const user = findVisitor || findAuthor;
 
       if (!user) {
         // User returns null
         return res.status(400).json({ status: 400, errMsg: "Incorrect username" });
       }
 
-      const match = await bcrypt.compare(password, user.password);
-      if (!match) {
+      const matchUser = await bcrypt.compare(password, user.password);
+      if (!matchUser) {
         return res.status(400).json({ status: 400, errMsg: "Incorrect password"});
       }
 
@@ -131,8 +140,9 @@ const logIn = [
       res.status(200).json({ 
         status: 200,
         message: "Authentication succeeded",
+        user: user,
         token 
-      })
+      });
     } catch (err) {
       console.error(err);
     }    
