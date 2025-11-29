@@ -12,7 +12,7 @@ visitorRouter.get("/:username", visitorController.visitorById);
 
 // Create/Sign up visitors ---> indexRouter
 
-// Update visitor
+// Update visitor - user can only edit their password or e-mail
 visitorRouter.put("/:username", visitorController.visitorEdit);
 
 // Delete visitor

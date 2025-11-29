@@ -10,10 +10,6 @@ async function visitorAll(req, res) {
   try {
     const allVisitors = await prisma.visitor.findMany();
 
-    // if (allVisitors.length) {
-    //   console.log(allVisitors.length);
-    // }
-
     res.json(allVisitors);
   } catch (err) {
     console.error(err);
@@ -39,7 +35,6 @@ const visitorEdit = [
   async (req, res, next) => {    
     const user = req.user;
 
-    // Check if user is in DB
     const visitor = await prisma.visitor.findUnique({
       where: { email: user.email }
     });
@@ -68,38 +63,65 @@ const visitorEdit = [
     const { email, password } = matchedData(req);
     const hashPassword = await bcrypt.hash(password, 9);
 
-    await prisma.visitor.update({
+    const user = await prisma.visitor.update({
       where: { email: req.user.email },
       data: { email, password: hashPassword }
     });
 
-    res.json({ msg: `Updating user -> ${req.user.email}`});
+    res.json(user);
   }
 ];
 
-async function visitorDelete(req, res) {  
-  try {
-    const user = req.params.username;
+const visitorDelete = [
+  async (req, res, next) => {
+    // Search for username
+    try {
+      const { username } = req.params;
 
-    const delComments = await prisma.comment.deleteMany({
-      where: {
-        username: user,
+      const isUser = await prisma.visitor.findMany({
+        where: {
+          username: {
+            equals: username,
+            mode: "insensitive"
+          }
+        }
+      });
+
+      if (isUser.length === 0) {
+        return res.status(400).json({
+          status: 400,
+          errMsg: `Username ${username} not found`,
+        });
       }
-    });
 
-    const delUser = await prisma.visitor.delete({
-      where: {
-        username: user,
-      }
-    });
+      next();
+    } catch (err) {
+      console.error(err);
+    }
+  }, async (req, res, next) => {
+    try {
+      const { username } = req.params;
 
-    const transaction = await prisma.$transaction([delComments, delUser]);
+      const delComments = await prisma.comment.deleteMany({
+        where: {
+          username: username,
+        }
+      });
 
-    res.json({ msg: `User ${user} and their comments deleted.`});
-  } catch (err) {
-    console.error(err);
+      const delUser = await prisma.visitor.delete({
+        where: {
+          username: username,
+        }
+      });
+
+      const transaction = await prisma.$transaction([delComments, delUser]);
+
+      res.json({ msg: `User ${username} and their comments deleted.`});
+    } catch (err) {
+      console.error(err);
+    }
   }
-}
+];
 
 
 
