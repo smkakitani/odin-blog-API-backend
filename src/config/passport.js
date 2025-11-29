@@ -11,26 +11,40 @@ const prisma = require("./database");
 const opts = {};
 opts.jwtFromRequest = ExtractJwt.fromAuthHeaderAsBearerToken();
 opts.secretOrKey = process.env.SECRET_SESSION;
-// opts.passReqToCallback = true;
 
 const jwtStrategy = new JwtStrategy(opts, async (jwt_payload, done) => {
   try {
-    // Verify if user exists in DB
-    const user = await prisma.author.findUnique({
+    const findVisitor = await prisma.visitor.findFirst({
+      where: { 
+        OR: [
+          {
+            email: jwt_payload.user.email,
+          }, {
+            username: jwt_payload.user.username,
+          },
+        ]
+      },
+      select: { 
+        email: true,
+        id: true,
+        username: true,
+      }
+    });
+    const findAuthor = await prisma.author.findUnique({
       where: { email: jwt_payload.user.email },
       select: { 
         email: true, 
         id: true 
       }
     });
+    const user = findVisitor || findAuthor;
     // console.log('Passport strategy: ', jwt_payload);
 
     if (!user) {
-      // return done(null, false);
-      return res.status(400).redirect("/log-in");
+      return done(null, false);
+      // return res.status(400).redirect("/log-in");
     }    
     
-    // Should redirect to /log-in ?
     return done(null, user);
   } catch (err) {
     console.error(err);
