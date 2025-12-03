@@ -9,6 +9,7 @@ const { jwtStrategy } = require("../config/passport");
 // Routers
 const authorRouter = require("./authorRouter");
 const postRouter = require("./postRouter");
+const commentRouter = require("./commentRouter");
 const visitorRouter = require("./visitorRouter");
 
 // 
@@ -31,14 +32,9 @@ indexRouter.get("/log-out", indexController.logOut);
 
 // API routers
 indexRouter.use("/authors", passport.authenticate("jwt", { session:false }), authorRouter);
-indexRouter.use("/posts", passport.authenticate(
-  "jwt", {
-    session: false,
-    // failureRedirect: "/log-in",
-  }
-), postRouter);
-
-indexRouter.use("/visitors", visitorRouter);
+indexRouter.use("/posts", passport.authenticate("jwt", { session: false }), postRouter);
+indexRouter.use("/posts", passport.authenticate("jwt", { session: false }), commentRouter);
+indexRouter.use("/visitors", passport.authenticate("jwt", { session: false }), visitorRouter);
 
 
 

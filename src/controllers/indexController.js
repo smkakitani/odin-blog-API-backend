@@ -135,6 +135,7 @@ const logIn = [
       // Send only necessary information about user to store on token
       delete user.password;
 
+      // Should change expiration token to 7 days
       const token = jwt.sign({user}, process.env.SECRET_SESSION, { expiresIn: "1H" });
 
       res.status(200).json({ 
@@ -152,13 +153,6 @@ const logIn = [
 async function logOut(req, res, next) {
   // When the user logs out, you can have the client remove the JWT from storage.
   res.send("logging out... ;-;");
-  // req.logout((err) => {
-  //   if (err) {
-  //     console.error(err);
-  //     return next(err);
-  //   }
-  //   res.send("logging out... ;-;");
-  // });
 }
 
 

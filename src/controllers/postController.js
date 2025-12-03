@@ -5,29 +5,166 @@ const {Prisma} = require("../../generated/prisma");
 
 
 // 
-async function postAll(req, res) {
+async function postAll(req, res, next) {
   try {
+    // If post doesn't exist, it'll return an empty array
     const allPosts = await prisma.post.findMany();
 
     res.json(allPosts);
   } catch (err) {
-    console.error(err);
+    next(err);
   }  
 }
 
-async function postById(req, res) {
+async function postByAuthorId(req, res, next) {
   try {
-    const { authorId, postId } = req.params;
-    console.log(authorId, postId);
+    const authorId = Number(req.params.authorId);
 
-    const post = await prisma.post.findUniqueOrThrow({
+    if (!Number.isInteger(authorId)) {
+      return res.status(400).json({
+        status: 400,
+        errMsg: "Invalid author ID.",
+      });
+    }
+
+    // Check if author ID exists
+    const author = await prisma.author.findUnique({
+      where: {
+        id: authorId,
+      }
+    });
+
+    if (!author) {
+      return res.status(404).json({
+        status: 404,
+        errMsg: "Author not found.",
+      });
+    }
+
+    // Get all posts from that author
+    const post = await prisma.post.findMany({
       where: { 
-        authorId: Number(authorId),
-        id: Number(postId) 
+        author: {
+          is: {
+            id: authorId,
+          }
+        }
       }
     });
 
     res.json(post);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function postCreate(req, res, next) {
+  try {
+    // Validate post first!!!
+    // Using TinyMCE - need to know how to handle it
+    const author = req.user;
+    const { title, content } = req.body;
+    // console.log( author, typeof author.id === "number");
+
+    if (typeof author.id !== "number") {
+      return res.status(404).json({
+        status: 404,
+        errMsg: "Author not found.",
+      });
+    }
+
+    const isAuthor = await prisma.author.findUnique({
+      where: { id: author.id }
+    });
+
+    if (!isAuthor) {
+      return res.status(404).json({
+        status: 404,
+        errMsg: "Author not found.",
+      });
+    }
+
+    const newPost = await prisma.post.create({
+      data: {
+        title,
+        content,
+        authorId: author.id
+      }
+    });
+    
+    res.status(201).json({status: 201, newPost});
+  } catch (err) {
+    // console.error('Creating post: ', err);
+    next(err);
+  }
+}
+
+async function postUpdate(req, res, next) {
+  try {
+    // Should get author's ID by request or params?
+    const author = req.user;
+    const { postId, authorId } = req.params;
+    const { title, content, published } = req.body;
+    // Published?
+    // console.log(postId, authorId);
+
+    if (typeof author.id !== "number") {
+      return res.status(404).json({
+        status: 404,
+        errMsg: "Author not found.",
+      });
+    }
+
+    const isAuthor = await prisma.author.findUnique({
+      where: { id: author.id }
+    });
+
+    if (!isAuthor) {
+      return res.status(404).json({
+        status: 404,
+        errMsg: "Author not found.",
+      });
+    }
+
+    const updatedPost = await prisma.post.update({
+      where: { 
+        authorId: {
+          equals: author.id,
+        },
+        id: Number(postId)
+      },
+      data: {
+        title,
+        content,
+        published: (published === "yes"), // Any other value sets published to FALSE
+      }
+    });
+
+    res.json({ status: 200, post: updatedPost });
+  } catch (err) {
+    // console.error(err);
+    next(err);
+  }
+}
+
+async function postDelete(req, res, next) {
+  // Setting published to false
+  try {
+    const postId = Number(req.params.postId);
+
+    if (!Number.isInteger(postId)) {
+      return res.status(400).json({
+        status: 400,
+        errMsg: "Invalid post ID.",
+      });
+    }
+
+    const delPost = await prisma.post.update({
+      where: { id: postId },
+      data: { published: false }
+    });
+
+    res.json(delPost);
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       if (err.code === "P2025") {
@@ -40,142 +177,12 @@ async function postById(req, res) {
   }
 }
 
-async function postCreate(req, res, next) {
-  try {
-    // Validate post first!!!
-    const author = req.user;
-    const { title, content } = req.body;
-
-    const result = await prisma.post.create({
-      data: {
-        authorId: Number(author.id),
-        title,
-        content,
-      },
-      select: { title: true, content: true, author: true }
-    });
-    
-    res.json(result);
-  } catch (err) {
-    console.error('Creating post: ', err);
-  }
-}
-
-async function postUpdate(req, res, next) {
-  try {
-    const author = req.user;
-    const postId = req.params.postId;
-    const { title, content } = req.body;
-    // Published?
-
-    const post = await prisma.post.update({
-      where: { id: postId },
-      data: {
-        title,
-        content,
-        published
-      }
-    });
-
-    res.json(post);
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-async function postDelete(req, res, next) {
-  try {
-    const postId = req.params.postId;
-
-    await prisma.post.update({
-      where: { id: Number(postId) },
-      data: { published: "false" }
-    });
-
-    res.json({
-      
-    });
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-
-
-// Comments section
-async function commentPost(req, res, next) {
-  try {
-    const postId = req.params.postId;
-
-    const comments = await prisma.comment.findMany({
-      where: { postId: Number(postId) }
-    });
-
-    res.json({
-      postId: postId,
-      comments: comments,
-    });
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-const commentCreate = [
-  // validateComment,
-  async (req, res, next) => {
-    const { content } = req.body;
-    const postId = req.params.postId;
-    const user = req.user;
-
-    const comment = await prisma.comment.create({
-      data: {
-        postId: Number(postId),
-        usernameId: user.id,
-        content: content,
-      }
-    });
-
-    res.json({postId,user, comment});
-  }
-];
-
-async function commentDelete(req, res) {
-  try {
-    const { postId, commentId } = req.params;
-    console.log("deleting comment?", req.params)
-
-    const delComment = await prisma.comment.delete({
-      where: { id: commentId },
-      select: { 
-        usernameId: true,
-        postId: true,
-      }
-    });
-
-    res.json({postId, commentId, delComment});
-  } catch (err) {
-    // console.error(err);
-    if (err instanceof Prisma.PrismaClientKnownRequestError) {
-      if (err.code === "P2025") {
-        return res.status(404).json({
-          status: 404,
-          errMsg: `Could not find ${err.meta.modelName}.`
-        });
-      }
-    }
-  }
-}
-
 
 
 module.exports = {
   postAll,
-  postById,
+  postByAuthorId,
   postCreate,
   postUpdate,
   postDelete,
-  // 
-  commentPost,
-  commentCreate,
-  commentDelete,
 };
