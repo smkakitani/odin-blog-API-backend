@@ -1,49 +1,73 @@
 // Import Prisma's client instantiated in '../config/database'
 const prisma = require("../config/database");
-
-const { validateVisitor, validationResult, matchedData } = require("../utils/validation");
+// Validation
+const { validateUpdateVisitor, validationResult, matchedData } = require("../utils/validation");
+// Hash passwords
+const bcrypt = require("bcryptjs");
 
 
 
 // 
-async function visitorAll(req, res) {
+async function visitorAll(req, res, next) {
   try {
-    const allVisitors = await prisma.visitor.findMany();
+    const allVisitors = await prisma.visitor.findMany({
+      omit: {
+        password: true,
+      }
+    });
 
     res.json(allVisitors);
   } catch (err) {
-    console.error(err);
+    next(err);
   }  
 }
 
-async function visitorById(req, res) {
+async function visitorById(req, res, next) {
   try {
     const username = req.params.username;
     
     const visitor = await prisma.visitor.findUnique({
-      where: { username: username }
+      where: { username: username },
+      omit: {
+        password: true,
+      }
     });
+
+    if (!visitor) {
+      return res.status(404).json({
+        status: 404,
+        errMsg: "User not found.",
+      });
+    }
 
     res.json(visitor);
   } catch (err) {
-    console.error(err);
+    next(err);
   }
 }
 
 const visitorEdit = [
-  validateVisitor,
-  async (req, res, next) => {    
+  validateUpdateVisitor,
+  async (req, res, next) => {
+    // Check if user exists (and if token = req.params?)
     const user = req.user;
+    const { username } = req.params;
 
     const visitor = await prisma.visitor.findUnique({
       where: { email: user.email }
     });
 
     if (!visitor) {
-      console.log("User inexistent: ", visitor);
       return res.status(400).json({
         status: 404,
         errMsg: "User not found.",
+      });
+    }
+
+    if (visitor.username !== username) {
+      return res.status(409).json({
+        status: 409,
+        errMsg: "Conflict. Different users."
       });
     }
 
@@ -55,17 +79,20 @@ const visitorEdit = [
       console.log(errors);
       return res.status(400).json({
         status: 400,
-        errMsg: "",
+        errMsg: "Invalid.",
         err: errors.array({ onlyFirstError: true }),
       });
     }
-    // 
+
     const { email, password } = matchedData(req);
     const hashPassword = await bcrypt.hash(password, 9);
 
     const user = await prisma.visitor.update({
       where: { email: req.user.email },
-      data: { email, password: hashPassword }
+      data: { email, password: hashPassword },
+      omit: {
+        password: true,
+      }
     });
 
     res.json(user);
@@ -74,9 +101,17 @@ const visitorEdit = [
 
 const visitorDelete = [
   async (req, res, next) => {
-    // Search for username
     try {
+      // Check if user from params is same as user from token
       const { username } = req.params;
+      const user = req.user;
+
+      if (username !== user.username) {
+        return res.status(403).json({
+          status: 403,
+          errMsg: "Different users."
+        });
+      }
 
       const isUser = await prisma.visitor.findMany({
         where: {
@@ -96,29 +131,37 @@ const visitorDelete = [
 
       next();
     } catch (err) {
-      console.error(err);
+      next(err);
     }
   }, async (req, res, next) => {
     try {
       const { username } = req.params;
+      const user = req.user;
 
-      const delComments = await prisma.comment.deleteMany({
+      // Using Prima's transaction to ensure queries succeed or not together - don't use AWAIT
+      const delComments = prisma.comment.deleteMany({
         where: {
-          username: username,
+          usernameId: (username === user.username) ? user.id : null,
         }
       });
-
-      const delUser = await prisma.visitor.delete({
+      const delUser = prisma.visitor.delete({
         where: {
-          username: username,
+          id: (username === user.username) ? user.id : null,
+        },
+        omit: {
+          password: true,
         }
       });
 
       const transaction = await prisma.$transaction([delComments, delUser]);
 
-      res.json({ msg: `User ${username} and their comments deleted.`});
+      res.status(204).json({ 
+        status: 204,
+        message: `User ${user.username} and their comments deleted.`,
+        transaction,
+      });
     } catch (err) {
-      console.error(err);
+      next(err);
     }
   }
 ];
