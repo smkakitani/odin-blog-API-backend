@@ -6,20 +6,11 @@ const prisma = require("../config/database");
 // Author validation
 const alphaErr = "must only contain letters or '-'.";
 const lengthErr = "must be between 2 and 32 characters.";
-// bail() example
-// body('username')
-//   .isEmail()
-//   // If not an email, stop here
-//   .bail()
-//   .custom(checkDenylistDomain)
-//   // If domain is not allowed, don't go check if it already exists
-//   .bail()
-//   .custom(checkEmailExists);
+
 
 
 // Custom validators
 const emailExist = async (value) => {
-  // console.log(value, typeof value);
   // Look for email on Author table
   const existingAuthor = await prisma.author.findMany({ 
     where: { 
@@ -38,23 +29,61 @@ const emailExist = async (value) => {
       } 
     } 
   });
-  // console.log(existingAuthor, existingVisitor);
-
-  if (existingAuthor || existingVisitor) {
-    throw new Error("E-mail already being used.");
+  
+  // Prisma's findMany() returns empty array if no matching records found
+  if (existingAuthor.length !== 0 || existingVisitor.length !== 0) {
+    throw new Error;
   }
 }
+
+const changeEmail = async (value, { req }) => {  
+  // Look for email on Author table
+  const existingAuthor = await prisma.author.findMany({ 
+    where: { 
+      email: {
+        equals: value,
+        mode: "insensitive"
+      } 
+    } 
+  });
+  // Look for email on Visitor table
+  const existingVisitor = await prisma.visitor.findMany({
+    where: { 
+      email: {
+        equals: value,
+        mode: "insensitive"
+      } 
+    } 
+  });
+
+  // User is visitor
+  if (req.user.username) {
+    if (req.user.email === value) {
+      console.log(value);
+      return;
+    }
+  } 
+  // User is author
+  if (req.user) {
+    if (req.user.email === value) {
+      return;
+    }
+  }
+
+  // Prisma's findMany() returns empty array if no matching records found
+  if (existingAuthor.length !== 0 || existingVisitor.length !== 0) {
+    throw new Error;
+  }
+}
+
 const samePassword = async (value, { req }) => {
   if (value !== req.body.password) {
     throw new Error;    
   }
 };
-const sameUsername = async (value) => {
-  
-  // Look for username on Visitor table - case insensitive? hmmm...
-  // const existingUsername = await prisma.visitor.findUnique({
-  //   where: { username: value, mode: "insensitive" }
-  // });
+
+const sameUsername = async (value, { req }) => {
+  // Username is case insensitive
   const existingUsername = await prisma.visitor.findMany({
     where: { 
       username: {
@@ -64,14 +93,15 @@ const sameUsername = async (value) => {
     },
   });
 
-  // console.log('Verifying username: ', value, existingUsername);
-  if (existingUsername) {
+  // Prisma's findMany() returns empty array if no matching records found
+  if (existingUsername.length !== 0) {
     throw new Error("Username already being used.");
   }
 }
 
 
 
+// Chain validator
 const validateAuthor = [
   body("firstName").trim()
     .notEmpty().withMessage("Missing first name.")
@@ -93,13 +123,11 @@ const validateAuthor = [
   body("confirmPassword")
     .notEmpty().withMessage("Missing password.")
     .custom(samePassword).withMessage("Must be same as password field.")
-    .hide("***")
-  ,body("bio").trim().optional({ values: "falsy" })
-    // .escape()
-  // ,query("")
+    .hide("***"),
+  body("bio").trim().optional({ values: "falsy" }).escape(),
 ];
 
-const validateVisitor = [
+const validateSignUpVisitor = [
   body("username").trim()
     .notEmpty().withMessage("Missing username.")
     .isAlphanumeric("en-US", { ignore: "-_"}).withMessage(`Only letters, numbers or '-' '_'.`)
@@ -120,16 +148,36 @@ const validateVisitor = [
     .hide("***"),
 ];
 
-// const validatePost = [
-//   body("title").notEmpty().trim()
-//     .
-// ];
+const validateUpdateVisitor = [
+  body("email").trim().optional({ values: "falsy" })
+    .notEmpty().withMessage("Missing e-mail field.")
+    .isEmail().withMessage("Not a valid e-mail address.")
+    .custom(changeEmail).withMessage("E-mail already in use.")
+    .normalizeEmail(),
+  body("password")
+    .notEmpty().withMessage("Missing password.")
+    .isLength({ min: 6 }).withMessage("Password must contain at least 6 characters.")
+    .hide("***"),
+  body("confirmPassword")
+    .notEmpty().withMessage("Missing password.")
+    .custom(samePassword).withMessage("Must be same as password field.")
+    .hide("***"),
+];
+
+// From TinyMCE
+const validatePost = [
+  body("post")
+    .notEmpty().trim()
+    .escape()
+];
 
 
 
 module.exports = {
   validateAuthor,
-  validateVisitor,
+  validatePost,
+  validateSignUpVisitor,
+  validateUpdateVisitor,
   // 
   validationResult,
   matchedData,
