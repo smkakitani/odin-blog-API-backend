@@ -25,7 +25,7 @@ model Author {
 
 model Post {
   id        Int       @id @default(autoincrement())
-  author    Author    @relation(fields: [authorId], references: [id])
+  author    Author    @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId  Int       @map("author_id")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -51,9 +51,9 @@ model Comment {
   id         String   @id @default(ulid())
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
   content    String
-  username   Visitor  @relation(fields: [usernameId], references: [id])
+  username   Visitor  @relation(fields: [usernameId], references: [id], onDelete: Cascade)
   usernameId String   @map("username_id")
-  post       Post     @relation(fields: [postId], references: [id])
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId     Int      @map("post_id")
 
   @@map("comments")
