@@ -5,8 +5,8 @@ const authorRouter = Router();
 
 
 
-// Routers - /api?/authors
-// Read author/authors
+// Routers - /authors
+// Read authors
 authorRouter.get("/", authorController.authorAll);
 authorRouter.get("/:authorId", authorController.authorById);
 
@@ -14,9 +14,6 @@ authorRouter.get("/:authorId", authorController.authorById);
 
 // Update author
 authorRouter.put("/:authorId", authorController.authorEdit);
-
-// Post can only be created with within a author?
-// authorRouter.post("/:authorId", authorController.author)
 
 // Delete author... should not remove the only author
 authorRouter.delete(["/:authorId", "/:authorEmail"], authorController.authorDelete);
