@@ -1,8 +1,8 @@
 // Import Prisma's client instantiated in '../config/database'
 const prisma = require("../config/database");
 // Validator
-const { validateAuthor, validateVisitor, validationResult, matchedData } = require("../utils/validation");
-// Encrypt password
+const { validateSignUpAuthor, validateSignUpVisitor, validateLogIn, validationResult, matchedData } = require("../utils/validation");
+// Hash password
 const bcrypt = require("bcryptjs");
 // Auth
 const passport = require("passport");
@@ -16,15 +16,14 @@ passport.use(jwtStrategy);
 
 // 
 const authorSignUp = [
-  validateAuthor,
+  validateSignUpAuthor,
   async (req, res, next) => {
     const errors = validationResult(req);
     
     if (!errors.isEmpty()) {
-      console.log(errors);
       return res.status(400).json({
         status: 400,
-        errMsg: "",
+        errMsg: "Invalid",
         err: errors.array({ onlyFirstError: true }),
       });
     }
@@ -34,39 +33,40 @@ const authorSignUp = [
     try {
       const { firstName, lastName, email, password, bio } = matchedData(req);
       const hashPassword = await bcrypt.hash(password, 9);
-      console.log({ firstName, lastName, email, password, bio }, 'hashed password: ',hashPassword);
 
-      const newAuthor = await prisma.author.create({
+      const author = await prisma.author.create({
         data: {
           firstName,
           lastName,
           email,
           password: hashPassword,
           bio,
+        },
+        omit: {
+          password: true,
         }
       });
 
       res.status(201).json({
         status: 201,
-        message: "Author has been created."
+        message: "Author has been created.",
+        author,
       });
     } catch (err) {
-      console.error(err);
-      return next(err);
+      next(err);
     }
   }
 ];
 
 const visitorSignUp = [
-  validateVisitor,
+  validateSignUpVisitor,
   async (req, res, next) => {
     const errors = validationResult(req);
     
     if (!errors.isEmpty()) {
-      console.log(errors);
       return res.status(400).json({
         status: 400,
-        errMsg: "",
+        errMsg: "Invalid.",
         err: errors.array({ onlyFirstError: true }),
       });
     }
@@ -76,33 +76,47 @@ const visitorSignUp = [
     try {
       const { username, email, password } = matchedData(req);
       const hashPassword = await bcrypt.hash(password, 9);
-      console.log(username, email, password, 'hash password:', hashPassword);
 
-      const newUser = await prisma.visitor.create({
+      const user = await prisma.visitor.create({
         data: {
           username,
           email,
           password: hashPassword,
-        }        
+        },
+        omit: {
+          password: true,
+        }
       });
 
       res.status(201).json({
         status: 201,
-        message: "User has been created."
+        message: "User has been created.",
+        user,
       });
     } catch (err) {
-      console.error(err);
+      next(err);
     }    
   }
 ];
 
 const logIn = [
-  // Verify e-mail and password
+  validateLogIn,
   async (req, res, next) => {
+    const errors = validationResult(req);
+    
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        status: 400,
+        errMsg: "Invalid.",
+        err: errors.array({ onlyFirstError: true }),
+      });
+    }
+
+    next();
+  }, async (req, res, next) => {
     try {
-      const { email, password } = req.body;
+      const { email, password } = matchedData(req);
       
-      // Should divide visitor log in from author log in...? hmmmm...
       const findVisitor = await prisma.visitor.findUnique({
         where: { email: email },
         select: {
@@ -120,16 +134,17 @@ const logIn = [
           password: true,
         },
       });
+      
       const user = findVisitor || findAuthor;
 
       if (!user) {
         // User returns null
-        return res.status(400).json({ status: 400, errMsg: "Incorrect username" });
+        return res.status(400).json({ status: 400, errMsg: "Invalid credentials." });
       }
 
       const matchUser = await bcrypt.compare(password, user.password);
       if (!matchUser) {
-        return res.status(400).json({ status: 400, errMsg: "Incorrect password"});
+        return res.status(400).json({ status: 400, errMsg: "Invalid credentials."});
       }
 
       // Send only necessary information about user to store on token
@@ -142,10 +157,10 @@ const logIn = [
         status: 200,
         message: "Authentication succeeded",
         user: user,
-        token 
+        token
       });
     } catch (err) {
-      console.error(err);
+      next(err);
     }    
   }
 ];
