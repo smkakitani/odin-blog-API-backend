@@ -1,4 +1,4 @@
-const { body, validationResult, matchedData } = require("express-validator");
+const { body, param, validationResult, matchedData } = require("express-validator");
 const prisma = require("../config/database");
 
 
@@ -101,8 +101,8 @@ const sameUsername = async (value, { req }) => {
 
 
 
-// Chain validator
-const validateAuthor = [
+// Chain validators
+const validateSignUpAuthor = [
   body("firstName").trim()
     .notEmpty().withMessage("Missing first name.")
     .isAlpha(["pt-BR"], { ignore: " -." }).withMessage(`First name ${alphaErr}`)
@@ -148,6 +148,14 @@ const validateSignUpVisitor = [
     .hide("***"),
 ];
 
+const validateLogIn = [
+  body("email").trim()
+    .notEmpty().withMessage("Missing e-mail field.")
+    .isEmail().withMessage("Not a valid e-mail address."),
+  body("password")
+    .notEmpty().withMessage("Missing password.")
+];
+
 const validateUpdateVisitor = [
   body("email").trim().optional({ values: "falsy" })
     .notEmpty().withMessage("Missing e-mail field.")
@@ -164,20 +172,57 @@ const validateUpdateVisitor = [
     .hide("***"),
 ];
 
+const validateUpdateAuthor = [
+  param("authorId")
+    .isInt().withMessage("authorId is not an Integer.")
+    .toInt(),
+  body("firstName").trim().optional({ values: "falsy" })
+    .notEmpty().withMessage("Missing first name.")
+    .isAlpha(["pt-BR"], { ignore: " -." }).withMessage(`First name ${alphaErr}`)
+    .isLength({ min: 2, max: 32 }).withMessage(`First name ${lengthErr}`),
+  body("lastName").trim().optional({ values: "falsy" })
+    .notEmpty().withMessage("Missing last name.")
+    .isAlpha(["pt-BR"], { ignore: " -." }).withMessage(`Last name ${alphaErr}`)
+    .isLength({ min: 2, max: 32 }).withMessage(`Last name ${lengthErr}`),
+  body("email").trim().optional({ values: "falsy" })
+    .notEmpty().withMessage("Missing e-mail field.")
+    .isEmail().withMessage("Not a valid e-mail address.")
+    .custom(changeEmail).withMessage("E-mail already in use.")
+    .normalizeEmail(),
+  body("password")
+    .notEmpty().withMessage("Missing password.")
+    .isLength({ min: 6 }).withMessage("Password must contain at least 6 characters.")
+    .hide("***"),
+  body("confirmPassword")
+    .notEmpty().withMessage("Missing password.")
+    .custom(samePassword).withMessage("Must be same as password field.")
+    .hide("***"),
+  body("bio").trim().optional({ values: "falsy" }),
+  
+];
+
 // From TinyMCE
 const validatePost = [
   body("post")
     .notEmpty().trim()
-    .escape()
+];
+
+const validateAuthorParams = [
+  param("authorId")
+    .isInt().withMessage("authorId is not an Integer.")
+    .toInt()
 ];
 
 
 
 module.exports = {
-  validateAuthor,
-  validatePost,
+  validateSignUpAuthor,
   validateSignUpVisitor,
+  validateLogIn,
   validateUpdateVisitor,
+  validateUpdateAuthor,
+  validatePost,
+  validateAuthorParams,
   // 
   validationResult,
   matchedData,
