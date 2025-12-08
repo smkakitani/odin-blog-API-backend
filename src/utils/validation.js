@@ -207,17 +207,18 @@ const validatePost = [
     .notEmpty().withMessage("Missing title field"),
   body("content").trim()
     .notEmpty().withMessage("Missing content."),
+  body("published").optional({ values: "falsy" })
 ];
 
 const validateAuthorParams = [
   param("authorId")
-    .isInt().withMessage("authorId is not an Integer.")
+    .isInt().withMessage("Author's ID must be an Integer.")
     .toInt()
 ];
 
 const validatePostParams = [
   param("postId")
-    .isInt().withMessage("postId is not an Integer.")
+    .isInt().withMessage("Post's ID must be an Integer.")
     .toInt()
 ];
 
