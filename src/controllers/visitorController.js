@@ -13,6 +13,11 @@ async function visitorAll(req, res, next) {
     const allVisitors = await prisma.visitor.findMany({
       omit: {
         password: true,
+      },
+      include: {
+        _count: {
+          select: { comments: true },
+        }
       }
     });
 
@@ -30,6 +35,9 @@ async function visitorById(req, res, next) {
       where: { username: username },
       omit: {
         password: true,
+      },
+      include: {
+        comments: true,
       }
     });
 
