@@ -202,14 +202,22 @@ const validateUpdateAuthor = [
 ];
 
 // From TinyMCE
-const validatePost = [
-  body("post")
-    .notEmpty().trim()
+const validatePost = [  
+  body("title").trim()
+    .notEmpty().withMessage("Missing title field"),
+  body("content").trim()
+    .notEmpty().withMessage("Missing content."),
 ];
 
 const validateAuthorParams = [
   param("authorId")
     .isInt().withMessage("authorId is not an Integer.")
+    .toInt()
+];
+
+const validatePostParams = [
+  param("postId")
+    .isInt().withMessage("postId is not an Integer.")
     .toInt()
 ];
 
@@ -219,10 +227,14 @@ module.exports = {
   validateSignUpAuthor,
   validateSignUpVisitor,
   validateLogIn,
+  // 
   validateUpdateVisitor,
   validateUpdateAuthor,
+  // 
   validatePost,
+  // 
   validateAuthorParams,
+  validatePostParams,
   // 
   validationResult,
   matchedData,

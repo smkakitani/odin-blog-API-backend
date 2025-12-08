@@ -1,6 +1,7 @@
 // Import Prisma's client instantiated in '../config/database'
 const prisma = require("../config/database");
-const {Prisma} = require("../../generated/prisma");
+const { Prisma } = require("../../generated/prisma");
+const { validatePost, validationResult, matchedData } = require("../utils/validation");
 
 
 
@@ -8,7 +9,13 @@ const {Prisma} = require("../../generated/prisma");
 async function postAll(req, res, next) {
   try {
     // If post doesn't exist, it'll return an empty array
-    const allPosts = await prisma.post.findMany();
+    const allPosts = await prisma.post.findMany({
+      include: {
+        _count: {
+          select: { comments: true }
+        }
+      }
+    });
 
     res.json(allPosts);
   } catch (err) {
@@ -49,6 +56,11 @@ async function postByAuthorId(req, res, next) {
             id: authorId,
           }
         }
+      },
+      include: {
+        _count: {
+          select: { comments: true },
+        }
       }
     });
 
@@ -58,46 +70,67 @@ async function postByAuthorId(req, res, next) {
   }
 }
 
-async function postCreate(req, res, next) {
-  try {
-    // Validate post first!!!
-    // Using TinyMCE - need to know how to handle it
-    const author = req.user;
-    const { title, content } = req.body;
-    // console.log( author, typeof author.id === "number");
+const postCreate = [
+  validatePost,
+  async (req, res, next) => {
+    try {
+      // Using TinyMCE to populate content - 
+      const author = req.user;
+      const errors = validationResult(req);
 
-    if (typeof author.id !== "number") {
-      return res.status(404).json({
-        status: 404,
-        errMsg: "Author not found.",
-      });
-    }
-
-    const isAuthor = await prisma.author.findUnique({
-      where: { id: author.id }
-    });
-
-    if (!isAuthor) {
-      return res.status(404).json({
-        status: 404,
-        errMsg: "Author not found.",
-      });
-    }
-
-    const newPost = await prisma.post.create({
-      data: {
-        title,
-        content,
-        authorId: author.id
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          status: 400,
+          errMsg: "Invalid.",
+          err: errors.array(),
+        });
       }
-    });
-    
-    res.status(201).json({status: 201, newPost});
-  } catch (err) {
-    // console.error('Creating post: ', err);
-    next(err);
+
+      if (typeof author.id !== "number") {
+        return res.status(404).json({
+          status: 404,
+          errMsg: "Author not found.",
+        });
+      }
+
+      const isAuthor = await prisma.author.findUnique({
+        where: { id: author.id }
+      });
+
+      if (!isAuthor) {
+        return res.status(404).json({
+          status: 404,
+          errMsg: "Author not found.",
+        });
+      }
+
+      // 
+      const { title, content } = matchedData(req);
+
+      const newPost = await prisma.post.create({
+        data: {
+          title,
+          content,
+          authorId: author.id
+        },
+        include: {
+          author: {
+            select: {
+              email: true,
+              firstName: true,
+              lastName: true,
+              bio: true,
+            },
+          }
+        }
+      });
+      
+      res.status(201).json({status: 201, post: newPost});
+    } catch (err) {
+      next(err);
+    }
   }
-}
+];
 
 async function postUpdate(req, res, next) {
   try {
@@ -105,8 +138,6 @@ async function postUpdate(req, res, next) {
     const author = req.user;
     const { postId, authorId } = req.params;
     const { title, content, published } = req.body;
-    // Published?
-    // console.log(postId, authorId);
 
     if (typeof author.id !== "number") {
       return res.status(404).json({
@@ -137,12 +168,16 @@ async function postUpdate(req, res, next) {
         title,
         content,
         published: (published === "yes"), // Any other value sets published to FALSE
+      },
+      include: {
+        _count: {
+          select: { comments: true },
+        }
       }
     });
 
     res.json({ status: 200, post: updatedPost });
   } catch (err) {
-    // console.error(err);
     next(err);
   }
 }
