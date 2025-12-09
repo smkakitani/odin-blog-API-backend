@@ -210,6 +210,11 @@ const validatePost = [
   body("published").optional({ values: "falsy" })
 ];
 
+const validateComment = [
+  body("content").trim()
+    .notEmpty().withMessage("Missing comment.")
+];
+
 const validateAuthorParams = [
   param("authorId")
     .isInt().withMessage("Author's ID must be an Integer.")
@@ -222,6 +227,11 @@ const validatePostParams = [
     .toInt()
 ];
 
+const validateCommParams = [
+  param("commentId")
+    .isULID().withMessage("Comment ID is not ULID.")
+];
+
 
 
 module.exports = {
@@ -232,10 +242,12 @@ module.exports = {
   validateUpdateVisitor,
   validateUpdateAuthor,
   // 
+  validateComment,
   validatePost,
   // 
   validateAuthorParams,
   validatePostParams,
+  validateCommParams,
   // 
   validationResult,
   matchedData,

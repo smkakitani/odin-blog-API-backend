@@ -1,146 +1,221 @@
 // Import Prisma's client instantiated in '../config/database'
 const prisma = require("../config/database");
-const {Prisma} = require("../../generated/prisma");
+// Validation
+const { 
+  validateComment,  
+  validatePostParams,
+  validateCommParams, 
+  validationResult, 
+  matchedData,  
+} = require("../utils/validation");
 
 
 
 // 
-async function commentByPostId(req, res, next) {
-  try {
-    const postId = Number(req.params.postId);
-    // console.log('comments: ',req.params);
+const commentByPostId = [
+  validatePostParams,
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
 
-    if (!Number.isInteger(postId)) {
-      return res.status(400).json({
-        status: 400,
-        errMsg: "Invalid post ID.",
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          status: 400,
+          errMsg: "Invalid parameters.",
+          err: errors.array(),
+        });
+      }
+
+      // Check if post exists
+      const { postId } = matchedData(req);
+      const isPost = await prisma.post.findUnique({
+        where: { id: postId }
       });
-    }
 
-    // Check if post exists
-    const isPost = await prisma.post.findUnique({
-      where: { id: postId }
-    });
+      if (!isPost) {
+        return res.status(404).json({
+          status: 404,
+          errMsg: "Post ID not found."
+        });
+      }
 
-    if (!isPost) {
-      return res.status(404).json({
-        status: 404,
-        errMsg: "Post ID not found."
-      });
-    }
-
-    const comments = await prisma.comment.findMany({
-      where: {
-        post: {
-          is: {
-            id: postId,
+      // Post > comments > user
+      const comments = await prisma.post.findUnique({
+        where: { id: postId },
+        select: {
+          id: true,
+          title: true,
+          comments: {
+            include: {
+              username: {
+                select: {
+                  username: true,
+                  email: true,
+                }
+              }
+            }
           }
         }
-      }
-    });
-
-    res.json(comments);
-  } catch (err) {
-    next(err);
-  }
-}
-
-const commentCreate = [
-  // validateComment,
-  async (req, res, next) => {
-    // Need to define where to get user's ID, req.user or req.params
-    const { content } = req.body;
-    const postId = Number(req.params.postId);
-    const user = req.user;
-
-    if (!Number.isInteger(postId)) {
-      return res.status(400).json({
-        status: 400,
-        errMsg: "Invalid post ID.",
       });
+
+      res.json(comments);
+    } catch (err) {
+      next(err);
     }
-
-    // Check if user is author
-    if (typeof user.id === "number") {
-      return res.status(400).json({
-        status: 400,
-        errMsg: "Author comment under construction..."
-      });
-    }
-
-    const comment = await prisma.comment.create({
-      data: {
-        postId: Number(postId),
-        usernameId: user.id,
-        content: content,
-      }
-    });
-
-    // res.json({postId,user, /* comment */ content});
-    res.json(comment);
   }
 ];
 
-async function commentDelete(req, res) {
-  try {
-    const commentId = req.params.commentId;
-    const postId = Number(req.params.postId);
-    console.log("deleting comment?", req.params)
+const commentCreate = [
+  validatePostParams,
+  validateComment,
+  async (req, res, next) => {
+    try {
+      // Need to define where to get user's ID, req.user or req.params
+      const user = req.user;
+      const errors = validationResult(req);
 
-    if (!Number.isInteger(postId)) {
-      return res.status(400).json({
-        status: 400,
-        errMsg: "Invalid post ID.",
-      });
-    }
+      if (!errors.isEmpty() && errors.mapped()?.postId) {
+          // Filtering errors of parameters field
+          const allErrors = errors.array();        
+          const paramsErrors = allErrors.filter(error => error.location === "params");
 
-    // const delComment = await prisma.post.update({
-    //   where: { id: postId },
-    //   data: {
-    //     comments: {
-    //       deleteMany: [{ id: commentId }]
-    //     }
-    //   },
-    //   include: {
-    //     comments: true,
-    //   }
-    // });
-
-    const delComment = await prisma.comment.deleteMany({
-      where: {
-        postId: {
-          equals: postId,
-        },
-        id: commentId
+          return res.status(400).json({
+            status: 400,
+            errMsg: "Invalid parameters.",
+            err: paramsErrors,
+          });
+      } else if (!errors.isEmpty()) {
+        return res.status(400).json({
+          status: 400,
+          errMsg: "Invalid.",
+          err: errors.array(),
+        });
       }
-    });
 
-    if (delComment.count === 0) {
-      return res.status(404).json({
-        status: 404,
-        errMsg: "Comment not found."
+      // Check if user is author - under construction @_@
+      if (typeof user.id === "number") {
+        return res.status(400).json({
+          status: 400,
+          errMsg: "Author comment under construction..."
+        });
+      }
+
+      // Check if post exist
+      const { postId, content } = matchedData(req);
+      const isPost = await prisma.post.findMany({
+        where: { id: { equals: postId }}
       });
-    } else if (delComment.count > 1) {
-      return res.status(666).json({
-        status: 666,
-        errMsg: "Huh-oh... more than 1 comment deleted...",
+
+      if (isPost.length === 0) {
+        return res.status(404).json({
+          status: 404,
+          errMsg: "Post not found."
+        });
+      }
+
+      const comment = await prisma.comment.create({
+        data: {
+          postId: postId,
+          usernameId: user.id,
+          content: content,
+        },
+        include: {
+          post: {
+            select: {
+              id: true,
+              title: true,
+            }
+          }
+        }
       });
+
+      res.json(comment);
+    } catch (err) {
+      next(err)
     }
-
-    res.json({ status: 204, message: "Comment deleted."});
-  } catch (err) {
-    next(err);
-    // console.error(err);
-    // if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    //   if (err.code === "P2025") {
-    //     return res.status(404).json({
-    //       status: 404,
-    //       errMsg: `Could not find ${err.meta.modelName}.`
-    //     });
-    //   }
-    // }
+    
   }
-}
+];
+
+const commentDelete = [
+  validateCommParams,
+  validatePostParams,
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+
+      if (!errors.isEmpty() && (errors.mapped()?.postId || errors.mapped()?.commentId)) {
+          // Filtering errors of parameters field
+          const allErrors = errors.array();        
+          const paramsErrors = allErrors.filter(error => error.location === "params");
+
+          return res.status(400).json({
+            status: 400,
+            errMsg: "Invalid parameters.",
+            err: paramsErrors,
+          });
+      } else if (!errors.isEmpty()) {
+        return res.status(400).json({
+          status: 400,
+          errMsg: "Invalid.",
+          err: errors.array(),
+        });
+      }
+
+      // Check
+      const { postId, commentId } = matchedData(req);
+      const isPost = await prisma.post.findUnique({
+        where: { id: postId },
+      });
+
+      if (!isPost) {
+        return res.status(404).json({
+          status: 404,
+          errMsg: "Post not found.",
+        });
+      }
+
+      const isComment = await prisma.comment.findUnique({
+        where: { id: commentId },
+      });
+      console.log('deleting comment -> ',isComment);
+
+      if (!isComment) {
+        return res.status(404).json({
+          status: 404,
+          errMsg: "Comment not found.",
+        });
+      }
+
+      // 
+      const deletedData = prisma.comment.findMany({
+        where: {
+          postId: {
+            equals: postId,
+          },
+          id: commentId
+        }
+      });
+
+      const delComment = prisma.comment.deleteMany({
+        where: {
+          postId: {
+            equals: postId,
+          },
+          id: commentId
+        }
+      });
+
+      const transaction = await prisma.$transaction([deletedData, delComment]);
+      res.json({
+        status: 200,
+        comment: isComment,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+];
 
 
 
