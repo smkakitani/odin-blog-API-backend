@@ -33,11 +33,20 @@ async function visitorById(req, res, next) {
     
     const visitor = await prisma.visitor.findUnique({
       where: { username: username },
-      omit: {
-        password: true,
-      },
-      include: {
-        comments: true,
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        comments: {
+          include: {
+            post: {
+              select: {
+                id: true,
+                title: true,
+              }
+            }
+          }
+        }
       }
     });
 
@@ -84,7 +93,6 @@ const visitorEdit = [
     const errors = validationResult(req);
     
     if (!errors.isEmpty()) {
-      console.log(errors);
       return res.status(400).json({
         status: 400,
         errMsg: "Invalid.",
@@ -92,17 +100,14 @@ const visitorEdit = [
       });
     }
 
-    const { email, password } = matchedData(req);
-    const hashPassword = await bcrypt.hash(password, 9);
+    const { email } = matchedData(req);
 
     const user = await prisma.visitor.update({
       where: { email: req.user.email },
-      data: { email, password: hashPassword },
-      omit: {
-        password: true,
-      }
+      data: { email: email },
     });
 
+    // res.json({ newEmail: email, });
     res.json(user);
   }
 ];
