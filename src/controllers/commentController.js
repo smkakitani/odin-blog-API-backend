@@ -125,6 +125,12 @@ const commentCreate = [
               id: true,
               title: true,
             }
+          },
+          username: {
+            select: {
+              username: true,
+              email: true,
+            }
           }
         }
       });
