@@ -2,32 +2,90 @@
 const prisma = require("../config/database");
 const { Prisma } = require("../../generated/prisma");
 const { 
+  validateQuery,
   validatePost, 
   validatePostParams, 
   validateAuthorParams, 
   validationResult, 
-  matchedData 
+  matchedData,   
 } = require("../utils/validation");
 
 
 
 // 
-async function postAll(req, res, next) {
-  try {
-    // If post doesn't exist, it'll return an empty array
+const posts = [
+  validateQuery, // Check for request's query
+  async (req, res, next) => {
+    // Check if request for posts have any query
+    if (Object.keys(req.query).length > 0) {
+      return next();
+    }
+
+    // Request to return all posts - empty array if no posts exist
     const allPosts = await prisma.post.findMany({
+      where: {
+        published: true,
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
       include: {
         _count: {
           select: { comments: true }
+        },
+        author: {
+          select: {
+            firstName: true,
+            lastName: true,
+          }
         }
       }
     });
 
     res.json(allPosts);
-  } catch (err) {
-    next(err);
-  }  
-}
+  }, async (req, res, next) => {
+    // TODO: query/filter
+    const query = req.query;
+    const errors = validationResult(req);
+    const { id } = matchedData(req);
+
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        status: 400,
+        errMsg: "Invalid query.",
+        err: errors.array(),
+      });
+    }
+
+    const post = await prisma.post.findUnique({
+      where: {
+        id: id,
+      }
+    });
+    // if (sort === "created") {
+    //   console.log("sorting posts by createdAt...");
+
+    //   const postsByDate = await prisma.post.findMany({
+    //     // where: {
+    //     //   published: true
+    //     // },
+    //     orderBy: [
+    //       { createdAt: "asc" }
+    //     ]
+    //     ,include: {
+    //       _count: {
+    //         select: { comments: true }
+    //       }
+    //     }
+    //   });
+
+    //   return res.json(postsByDate);
+    // }
+
+    // console.log(query.id);
+    res.json(post);
+  }
+];
 
 const postByAuthorId = [
   validateAuthorParams,
@@ -88,6 +146,7 @@ const postCreate = [
       // Using TinyMCE to populate content - 
       const author = req.user;
       const errors = validationResult(req);
+      // console.log("calling postCreate!");
 
       if (!errors.isEmpty()) {
         return res.status(400).json({
@@ -116,13 +175,14 @@ const postCreate = [
       }
 
       // 
-      const { title, content } = matchedData(req);
+      const { title, content, published } = matchedData(req);
 
       const newPost = await prisma.post.create({
         data: {
           title,
           content,
-          authorId: author.id
+          published: (published === "yes") || Prisma.skip,
+          authorId: author.id,
         },
         include: {
           author: {
@@ -136,7 +196,7 @@ const postCreate = [
         }
       });
       
-      res.status(201).json(newPost);
+      res.status(201).json(newPost /* {post: {title,content, published}} */);
     } catch (err) {
       next(err);
     }
@@ -151,6 +211,7 @@ const postUpdate = [
     try {
       const author = req.user;
       const errors = validationResult(req);
+      // console.log(author);
 
       if (!errors.isEmpty() && (errors.mapped()?.authorId || errors.mapped()?.postId)) {
         // Filtering errors of parameters field
@@ -173,6 +234,7 @@ const postUpdate = [
 
       // Check author & post
       const { postId, authorId } = matchedData(req, { locations: ["params"] });
+      console.log(typeof postId,typeof authorId)
       const isAuthor = await prisma.author.findUnique({
         where: { id: authorId }
       });
@@ -193,28 +255,29 @@ const postUpdate = [
       }
 
       // 
-      const { title, content, published } = matchedData(req, { locations: ["body"] });
+      // const { title, content, published } = matchedData(req, { locations: ["body"] });
 
-      const updatedPost = await prisma.post.update({
-        where: { 
-          authorId: {
-            equals: author.id,
-          },
-          id: postId
-        },
-        data: {
-          title,
-          content,
-          published: (published === "yes") || Prisma.skip,
-        },
-        include: {
-          _count: {
-            select: { comments: true },
-          }
-        }
-      });
+      // const updatedPost = await prisma.post.update({
+      //   where: { 
+      //     authorId: {
+      //       equals: authorId, // change back to author.id
+      //     },
+      //     id: postId
+      //   },
+      //   data: {
+      //     title,
+      //     content,
+      //     published: (published === "yes") || Prisma.skip,
+      //   },
+      //   include: {
+      //     _count: {
+      //       select: { comments: true },
+      //     }
+      //   }
+      // });
 
-      res.json({ status: 200, post: updatedPost });
+      // res.json({ status: 200, post: updatedPost });
+      res.json({ msg: "huh updating post..."});
     } catch (err) {
       next(err);
     }
@@ -273,7 +336,7 @@ const postDelete = [
 
 
 module.exports = {
-  postAll,
+  posts,
   postByAuthorId,
   postCreate,
   postUpdate,
