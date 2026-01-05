@@ -2,9 +2,7 @@ const { Router } = require("express");
 const indexController = require("../controllers/indexController");
 
 // JWT
-// const { verifyToken } = require("../config/passport");
-const passport = require("passport");
-const { jwtStrategy } = require("../config/passport");
+const { auth } = require("../config/passport");
 
 // Routers
 const authorRouter = require("./authorRouter");
@@ -14,27 +12,24 @@ const visitorRouter = require("./visitorRouter");
 
 // 
 const indexRouter = Router();
-passport.use(jwtStrategy);
 
 
 
-// Routers - /api?
+// Routers
 indexRouter.get("/", (req, res) => res.send("Hello! From Blog API :3"));
 
-// Sign up & log in/out
+// Sign up & log in
 indexRouter.post("/sign-up/author", indexController.authorSignUp);
 indexRouter.post("/sign-up", indexController.visitorSignUp);
 indexRouter.post("/log-in", indexController.logIn);
-// When the user logs out, you can have the client remove the JWT from localStorage.
-indexRouter.get("/log-out", indexController.logOut);
 
 
 
 // API routers
-indexRouter.use("/authors", passport.authenticate("jwt", { session:false }), authorRouter);
-indexRouter.use("/posts", passport.authenticate("jwt", { session: false }), postRouter);
-indexRouter.use("/posts", passport.authenticate("jwt", { session: false }), commentRouter);
-indexRouter.use("/visitors", passport.authenticate("jwt", { session: false }), visitorRouter);
+indexRouter.use("/authors", /* passport.authenticate("jwt", { session:false }), */ authorRouter);
+indexRouter.use("/posts", /* passport.authenticate("jwt", { session: false }), */ postRouter);
+indexRouter.use("/posts", /* auth, */ /* passport.authenticate("jwt", { session: false }), */ commentRouter);
+indexRouter.use("/visitors", auth, /* passport.authenticate("jwt", { session: false, }), */ visitorRouter);
 
 
 
