@@ -1,4 +1,12 @@
-const { body, param, validationResult, matchedData } = require("express-validator");
+// Express-validator
+const { 
+  body, 
+  param, 
+  query, 
+  validationResult, 
+  matchedData,
+} = require("express-validator");
+// Prisma's client
 const prisma = require("../config/database");
 
 
@@ -113,6 +121,7 @@ const validateSignUpAuthor = [
     .isLength({ min: 2, max: 32 }).withMessage(`Last name ${lengthErr}`),
   body("email").trim()
     .notEmpty().withMessage("Missing e-mail field.")
+    .isLength({ min: 4, max: 254 })
     .isEmail().withMessage("Not a valid e-mail address.")
     .custom(emailExist).withMessage("E-mail already in use.")
     .normalizeEmail(),
@@ -131,10 +140,11 @@ const validateSignUpVisitor = [
   body("username").trim()
     .notEmpty().withMessage("Missing username.")
     .isAlphanumeric("en-US", { ignore: "-_"}).withMessage(`Only letters, numbers or '-' '_'.`)
-    .isLength({ min: 4, max: 16 }).withMessage("Username must be between 4 and 16 characters.")
+    .isLength({ min: 4, max: 32 }).withMessage("Username must be between 4 and 16 characters.")
     .custom(sameUsername),
   body("email").trim()
     .notEmpty().withMessage("Missing e-mail field.")
+    .isLength({ min: 4, max: 254 })
     .isEmail().withMessage("Not a valid e-mail address.")
     .custom(emailExist).withMessage("E-mail already in use.")
     .normalizeEmail(),
@@ -157,19 +167,20 @@ const validateLogIn = [
 ];
 
 const validateUpdateVisitor = [
-  body("email").trim().optional({ values: "falsy" })
+  body("email").trim()
     .notEmpty().withMessage("Missing e-mail field.")
+    .isLength({ min: 4, max: 254 })
     .isEmail().withMessage("Not a valid e-mail address.")
-    .custom(changeEmail).withMessage("E-mail already in use.")
+    .custom(emailExist).withMessage("E-mail already in use.")
     .normalizeEmail(),
-  body("password")
+  /* body("password")
     .notEmpty().withMessage("Missing password.")
     .isLength({ min: 6 }).withMessage("Password must contain at least 6 characters.")
     .hide("***"),
   body("confirmPassword")
     .notEmpty().withMessage("Missing password.")
     .custom(samePassword).withMessage("Must be same as password field.")
-    .hide("***"),
+    .hide("***"), */
 ];
 
 const validateUpdateAuthor = [
@@ -184,10 +195,11 @@ const validateUpdateAuthor = [
     .notEmpty().withMessage("Missing last name.")
     .isAlpha(["pt-BR"], { ignore: " -." }).withMessage(`Last name ${alphaErr}`)
     .isLength({ min: 2, max: 32 }).withMessage(`Last name ${lengthErr}`),
-  body("email").trim().optional({ values: "falsy" })
+  body("email").trim()
     .notEmpty().withMessage("Missing e-mail field.")
+    .isLength({ min: 4, max: 254 })
     .isEmail().withMessage("Not a valid e-mail address.")
-    .custom(changeEmail).withMessage("E-mail already in use.")
+    .custom(emailExist).withMessage("E-mail already in use.")
     .normalizeEmail(),
   body("password")
     .notEmpty().withMessage("Missing password.")
@@ -232,6 +244,12 @@ const validateCommParams = [
     .isULID().withMessage("Comment ID is not ULID.")
 ];
 
+const validateQuery = [
+  // check(req.query).notEmpty().withMessage("Empty query.")
+  query("id").notEmpty().withMessage("Empty query.").optional({ values: "falsy" })
+    .toInt()
+];
+
 
 
 module.exports = {
@@ -248,6 +266,7 @@ module.exports = {
   validateAuthorParams,
   validatePostParams,
   validateCommParams,
+  validateQuery,
   // 
   validationResult,
   matchedData,
