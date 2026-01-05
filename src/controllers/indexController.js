@@ -1,16 +1,17 @@
 // Import Prisma's client instantiated in '../config/database'
 const prisma = require("../config/database");
 // Validator
-const { validateSignUpAuthor, validateSignUpVisitor, validateLogIn, validationResult, matchedData } = require("../utils/validation");
+const { 
+  validateSignUpAuthor, 
+  validateSignUpVisitor, 
+  validateLogIn, 
+  validationResult, 
+  matchedData,
+} = require("../utils/validation");
 // Hash password
 const bcrypt = require("bcryptjs");
 // Auth
-const passport = require("passport");
-const { jwtStrategy } = require("../config/passport");
 const jwt = require("jsonwebtoken");
-
-// Set Passport's strategy to JWT
-passport.use(jwtStrategy);
 
 
 
@@ -66,7 +67,7 @@ const visitorSignUp = [
     if (!errors.isEmpty()) {
       return res.status(400).json({
         status: 400,
-        errMsg: "Invalid.",
+        errMsg: "Invalid field.",
         err: errors.array({ onlyFirstError: true }),
       });
     }
@@ -132,6 +133,7 @@ const logIn = [
           email: true,
           id: true,
           password: true,
+          firstName: true,
         },
       });
       
@@ -139,19 +141,27 @@ const logIn = [
 
       if (!user) {
         // User returns null
-        return res.status(400).json({ status: 400, errMsg: "Invalid credentials." });
+        return res.status(400).json({ 
+          status: 400, 
+          errMsg: "Invalid credentials.",
+          err: [{ path: "", msg: "Invalid credentials."}]
+        });
       }
 
       const matchUser = await bcrypt.compare(password, user.password);
       if (!matchUser) {
-        return res.status(400).json({ status: 400, errMsg: "Invalid credentials."});
+        return res.status(400).json({ 
+          status: 400, 
+          errMsg: "Invalid credentials.",
+          err: [{ path: "", msg: "Invalid credentials."}]
+        });
       }
 
       // Send only necessary information about user to store on token
       delete user.password;
 
       // Should change expiration token to 7 days
-      const token = jwt.sign({user}, process.env.SECRET_SESSION, { expiresIn: "1H" });
+      const token = jwt.sign({user}, process.env.SECRET_SESSION, { expiresIn: "7H" });
 
       res.status(200).json({ 
         status: 200,
@@ -165,16 +175,10 @@ const logIn = [
   }
 ];
 
-async function logOut(req, res, next) {
-  // When the user logs out, you can have the client remove the JWT from storage.
-  res.send("logging out... ;-;");
-}
-
 
 
 module.exports = {
   authorSignUp,
   visitorSignUp,
   logIn,
-  logOut,
 };
