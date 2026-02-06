@@ -30,23 +30,45 @@ async function visitorAll(req, res, next) {
 async function visitorById(req, res, next) {
   try {
     const username = req.params.username;
-    
+
+    // Visitor's data
     const visitor = await prisma.visitor.findUnique({
       where: { username: username },
       select: {
         id: true,
         username: true,
         email: true,
-        comments: {
-          include: {
+      }
+    });
+
+    // Visitor's comments in published posts
+    const visitorComments = await prisma.comment.findMany({
+      where: {
+        AND: [
+          {
+            username: { 
+              id: visitor.id,
+            },
+          },
+          {
             post: {
-              select: {
-                id: true,
-                title: true,
+              published: {
+                equals: true,
               }
             }
           }
+        ]
+      },
+      include: {
+        post: {
+          select: {
+            id: true,
+            title: true,
+          }
         }
+      },
+      orderBy: {
+        createdAt: "desc",
       }
     });
 
@@ -57,6 +79,8 @@ async function visitorById(req, res, next) {
       });
     }
 
+    // Insert comments to visitor
+    visitor.comments = visitorComments;
     res.json(visitor);
   } catch (err) {
     next(err);
