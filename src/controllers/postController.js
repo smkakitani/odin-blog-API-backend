@@ -129,7 +129,10 @@ const postByAuthorId = [
           _count: {
             select: { comments: true },
           }
-        }
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
       });
 
       res.json(posts);
