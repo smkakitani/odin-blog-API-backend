@@ -195,20 +195,20 @@ const validateUpdateAuthor = [
     .notEmpty().withMessage("Missing last name.")
     .isAlpha(["pt-BR"], { ignore: " -." }).withMessage(`Last name ${alphaErr}`)
     .isLength({ min: 2, max: 32 }).withMessage(`Last name ${lengthErr}`),
-  body("email").trim()
-    .notEmpty().withMessage("Missing e-mail field.")
-    .isLength({ min: 4, max: 254 })
-    .isEmail().withMessage("Not a valid e-mail address.")
-    .custom(emailExist).withMessage("E-mail already in use.")
-    .normalizeEmail(),
-  body("password")
-    .notEmpty().withMessage("Missing password.")
-    .isLength({ min: 6 }).withMessage("Password must contain at least 6 characters.")
-    .hide("***"),
-  body("confirmPassword")
-    .notEmpty().withMessage("Missing password.")
-    .custom(samePassword).withMessage("Must be same as password field.")
-    .hide("***"),
+  // body("email").trim()
+  //   .notEmpty().withMessage("Missing e-mail field.")
+  //   .isLength({ min: 4, max: 254 })
+  //   .isEmail().withMessage("Not a valid e-mail address.")
+  //   .custom(emailExist).withMessage("E-mail already in use.")
+  //   .normalizeEmail(),
+  // body("password")
+  //   .notEmpty().withMessage("Missing password.")
+  //   .isLength({ min: 6 }).withMessage("Password must contain at least 6 characters.")
+  //   .hide("***"),
+  // body("confirmPassword")
+  //   .notEmpty().withMessage("Missing password.")
+  //   .custom(samePassword).withMessage("Must be same as password field.")
+  //   .hide("***"),
   body("bio").trim().optional({ values: "falsy" }),
   
 ];
