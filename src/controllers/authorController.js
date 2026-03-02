@@ -111,17 +111,17 @@ const authorEdit = [
     }    
   }, async (req, res, next) => {
     // Validated fields
-    const { authorId, firstName, lastName, email, password, bio } = matchedData(req);
-    const hashPassword = await bcrypt.hash(password, 9);    
+    const {  authorId,/* firstName, lastName, email, password, */ bio } = matchedData(req);
+    // const hashPassword = await bcrypt.hash(password, 9);
 
     const author = await prisma.author.update({
       where: { id: authorId },
       data: { 
-        firstName: firstName ?? Prisma.skip, 
-        lastName: lastName ?? Prisma.skip, 
-        email: email ?? Prisma.skip, 
-        password: hashPassword, 
-        bio,
+        // firstName: firstName ?? Prisma.skip, 
+        // lastName: lastName ?? Prisma.skip, 
+        // email: email ?? Prisma.skip, 
+        // password: hashPassword, 
+        bio: bio ?? Prisma.skip,
       },
       omit: { password: true },
     });
