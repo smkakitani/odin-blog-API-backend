@@ -16,7 +16,7 @@ const indexRouter = Router();
 
 
 // Routers
-indexRouter.get("/", (req, res) => res.send("Hello! From Blog API :3"));
+/* indexRouter.get("/", (req, res) => res.send("Hello! From Blog API :3")); */
 
 // Sign up & log in
 indexRouter.post("/sign-up/author", indexController.authorSignUp);
@@ -26,10 +26,10 @@ indexRouter.post("/log-in", indexController.logIn);
 
 
 // API routers
-indexRouter.use("/authors", /* passport.authenticate("jwt", { session:false }), */ authorRouter);
-indexRouter.use("/posts", /* passport.authenticate("jwt", { session: false }), */ postRouter);
-indexRouter.use("/posts", /* auth, */ /* passport.authenticate("jwt", { session: false }), */ commentRouter);
-indexRouter.use("/visitors", auth, /* passport.authenticate("jwt", { session: false, }), */ visitorRouter);
+indexRouter.use("/authors", authorRouter);
+indexRouter.use("/posts", postRouter);
+indexRouter.use("/posts", commentRouter);
+indexRouter.use("/visitors", auth, visitorRouter);
 
 
 
