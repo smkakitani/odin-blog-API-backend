@@ -1,6 +1,8 @@
 # Blog REST API 
 REST API built with Node.js/Express. The project is based on RESTful API design and MVC architecture pattern.
 
+Front-end demo: [https://blogapi-higurashi.netlify.app](https://blogapi-higurashi.netlify.app/)
+
 This project was created following [The Odin Project - Project: Blog API](https://www.theodinproject.com/lessons/node-path-nodejs-blog-api) lesson.
 
 ## :hammer_and_wrench: Tech Stack :hammer_and_wrench: 
