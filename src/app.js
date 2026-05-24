@@ -23,14 +23,6 @@ app.use(express.json()) // For parsing application/json
 app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
 
 
-// Custom middleware to access current user
-// app.use((req, res, next) => {
-
-//   // console.log(req.originalUrl);
-//   next();
-// });
-
-
 
 // Routers
 app.use("/", indexRouter);
